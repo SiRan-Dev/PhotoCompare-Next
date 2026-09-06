@@ -1,5 +1,6 @@
 package com.sirandev.photocompare.ui.compare
 
+import android.view.TextureView
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -65,8 +66,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
 import androidx.navigation.NavController
 import com.sirandev.photocompare.R
 import com.sirandev.photocompare.data.ImageBean
@@ -126,6 +125,31 @@ fun CompareScreen(
     val livePhotoPlayer = remember { LivePhotoPlayerController(context) }
     DisposableEffect(Unit) {
         onDispose { livePhotoPlayer.release() }
+    }
+
+    // Live Photo playback: a long-press on either pane plays BOTH panes' current photos
+    val scope = rememberCoroutineScope()
+    var playingSides by remember { mutableStateOf(setOf<PaneSide>()) }
+    fun startLivePlayback() {
+        val imgs = sessionViewModel.images.value
+        PaneSide.entries.forEach { side ->
+            val bridge = if (side == PaneSide.TOP) topBridge else bottomBridge
+            val bean = imgs.getOrNull(bridge.activePage) ?: return@forEach
+            scope.launch {
+                val info = livePhotoResolver.resolve(bean)
+                if (info !is LivePhotoInfo.NotLivePhoto) {
+                    val file = videoExtractor.extract(bean, info)
+                    if (file != null) {
+                        livePhotoPlayer.play(side, file)
+                        playingSides = playingSides + side
+                    }
+                }
+            }
+        }
+    }
+    fun stopLivePlayback() {
+        livePhotoPlayer.stopAll()
+        playingSides = emptySet()
     }
 
     LaunchedEffect(images.size) {
@@ -194,8 +218,10 @@ fun CompareScreen(
                 darkCheckbox = prefs.checkboxStyleDark,
                 showExif = prefs.showExifDetails,
                 livePhotoResolver = livePhotoResolver,
-                videoExtractor = videoExtractor,
                 livePhotoPlayer = livePhotoPlayer,
+                playing = PaneSide.TOP in playingSides,
+                onLiveStart = { startLivePlayback() },
+                onLiveEnd = { stopLivePlayback() },
             )
             ComparePane(
                 side = PaneSide.BOTTOM,
@@ -208,8 +234,10 @@ fun CompareScreen(
                 darkCheckbox = prefs.checkboxStyleDark,
                 showExif = prefs.showExifDetails,
                 livePhotoResolver = livePhotoResolver,
-                videoExtractor = videoExtractor,
                 livePhotoPlayer = livePhotoPlayer,
+                playing = PaneSide.BOTTOM in playingSides,
+                onLiveStart = { startLivePlayback() },
+                onLiveEnd = { stopLivePlayback() },
             )
         }
     }
@@ -235,6 +263,27 @@ fun CompareScreen(
 private fun leaveCompare(sessionViewModel: SessionViewModel, mediator: CompareMediator, navController: NavController) {
     sessionViewModel.onReturnedFromCompare(mediator.getTopIndex(), mediator.getBottomIndex())
     navController.popBackStack()
+}
+
+/**
+ * The exact graphics-layer transform used to draw the still image (scale relative to source
+ * pixels, top-left origin, viewport-centering translations). Applied verbatim to the live
+ * photo video overlay so motion frames land pixel-perfectly on top of the photo.
+ */
+private fun Modifier.matchStillImageTransform(zoom: ZoomableState): Modifier = graphicsLayer {
+    transformOrigin = TransformOrigin(0f, 0f)
+    val bs = zoom.bitmapScale
+    scaleX = zoom.scale / bs
+    scaleY = zoom.scale / bs
+    val center = zoom.center
+    if (center != null) {
+        translationX = size.width / 2f - center.x * zoom.scale
+        translationY = size.height / 2f - center.y * zoom.scale
+    } else {
+        // fit state: the drawn content spans srcSize × scale, centered in the viewport
+        translationX = size.width / 2f - (zoom.srcSize.width * zoom.scale) / 2f
+        translationY = size.height / 2f - (zoom.srcSize.height * zoom.scale) / 2f
+    }
 }
 
 /** Per-pane bridge state held across recompositions. */
@@ -282,8 +331,10 @@ private fun ComparePane(
     darkCheckbox: Boolean,
     showExif: Boolean,
     livePhotoResolver: ContentLivePhotoResolver,
-    videoExtractor: VideoExtractor,
     livePhotoPlayer: LivePhotoPlayerController,
+    playing: Boolean,
+    onLiveStart: () -> Unit,
+    onLiveEnd: () -> Unit,
 ) {
     if (images.isEmpty()) return
     val zoomStates = remember { mutableMapOf<Int, ZoomableState>() }
@@ -347,27 +398,10 @@ private fun ComparePane(
                 meta = loaded
                 loaded?.let { zoom.onImageLoaded(it.width, it.height, it.rotationSwapped) }
             }
-            // live photo detection (badge) & playback (long-press)
+            // live photo badge: detect whether the CURRENT photo carries embedded motion
             var liveInfo by remember(bean.contentUri) { mutableStateOf<LivePhotoInfo?>(null) }
             LaunchedEffect(bean.contentUri) {
                 liveInfo = livePhotoResolver.resolve(bean)
-            }
-            var playingLivePhoto by remember(bean.contentUri) { mutableStateOf(false) }
-            fun startLivePhoto() {
-                val info = liveInfo ?: return
-                scope.launch {
-                    val file = videoExtractor.extract(bean, info)
-                    if (file != null) {
-                        livePhotoPlayer.play(file)
-                        playingLivePhoto = true
-                    }
-                }
-            }
-            fun stopLivePhoto() {
-                if (playingLivePhoto) {
-                    livePhotoPlayer.stop()
-                    playingLivePhoto = false
-                }
             }
 
             Box(
@@ -406,8 +440,8 @@ private fun ComparePane(
                             .requiredSize(contentW, contentH)
                             .zoomable(
                                 state = zoom,
-                                onLongPressStart = { startLivePhoto() },
-                                onLongPressEnd = { stopLivePhoto() },
+                                onLongPressStart = { onLiveStart() },
+                                onLongPressEnd = { onLiveEnd() },
                             )
                             .graphicsLayer {
                                 transformOrigin = TransformOrigin(0f, 0f)
@@ -425,25 +459,28 @@ private fun ComparePane(
                                 }
                             },
                     )
+
+                    // Live photo motion overlay: a TextureView bound straight to this pane's
+                    // ExoPlayer and transformed EXACTLY like the still image above, so the
+                    // motion lines up 1:1 with the photo. The view is transparent until the
+                    // first video frame arrives, so buffering can never flash black.
+                    if (playing && page == activePage) {
+                        AndroidView(
+                            factory = { ctx -> TextureView(ctx).apply { isOpaque = false } },
+                            update = { view -> livePhotoPlayer.attachView(side, view) },
+                            onRelease = { view -> livePhotoPlayer.detachView(side, view) },
+                            modifier = Modifier
+                                .requiredSize(contentW, contentH)
+                                .matchStillImageTransform(zoom),
+                        )
+                    }
                 } else {
                     // metadata still loading — placeholder keeps the pane stable
                     Box(modifier = Modifier.fillMaxSize().background(Color.Black))
                 }
 
-                // live photo playback overlay
-                if (playingLivePhoto) {
-                    AndroidView(
-                        factory = { ctx ->
-                            PlayerView(ctx).apply {
-                                useController = false
-                                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                            }
-                        },
-                        update = { view -> view.player = livePhotoPlayer.player },
-                        modifier = Modifier.fillMaxSize().background(Color.Black),
-                    )
-                } else if (liveInfo != null && liveInfo !is LivePhotoInfo.NotLivePhoto) {
-                    // live photo badge
+                // live photo badge
+                if (!playing && liveInfo != null && liveInfo !is LivePhotoInfo.NotLivePhoto) {
                     Icon(
                         imageVector = Icons.Filled.MotionPhotosOn,
                         contentDescription = null,
