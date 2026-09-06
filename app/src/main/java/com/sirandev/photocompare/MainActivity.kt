@@ -1,19 +1,18 @@
 package com.sirandev.photocompare
 
+import android.util.Log
 import android.os.Bundle
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
-import android.util.Log
 import com.sirandev.photocompare.data.prefs.ThemeMode
 import com.sirandev.photocompare.ui.navigation.PhotoCompareNavHost
 import com.sirandev.photocompare.ui.session.SessionViewModel
@@ -40,12 +39,14 @@ class MainActivity : ComponentActivity() {
              * and onBackPressed()/KEYCODE_BACK are gone), so back handling must go through
              * OnBackPressedDispatcher. Registering a SEPARATE system OnBackInvokedCallback
              * does not stick: androidx re-registers its own system callback whenever the
-             * enabled-callback set changes (navigation, dialogs), winning the system-side
-             * precedence again. Instead we put a PLAIN dispatcher callback on top of the
-             * queue (added last): predictive events (started/progressed) are forwarded to
-             * it but it does not act on them — so no predictive animation renders — and on
-             * commit it performs the pop directly. Flipping [prefs.predictiveBack] on
-             * disables it, handing gestures back to NavHost's animated predictive handling.
+             * enabled-callback set changes, winning the system-side precedence again.
+             *
+             * Instead we keep a PLAIN dispatcher callback — no predictive handlers, so no
+             * predictive animation renders — as the NEWEST callback in the queue: the
+             * dispatcher always executes the most recently added enabled callback. NavHost
+             * registers a fresh predictive callback per destination, so we re-add on every
+             * destination change to stay on top. Flipping [prefs.predictiveBack] on
+             * disables the blocker, handing gestures back to NavHost's animated handling.
              */
             val backBlocker = remember {
                 object : OnBackPressedCallback(enabled = false) {
@@ -57,11 +58,13 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
-            DisposableEffect(prefs.predictiveBack) {
+            LaunchedEffect(prefs.predictiveBack) {
                 backBlocker.isEnabled = !prefs.predictiveBack
-                // added AFTER composition: newest dispatcher callback → top precedence
-                onBackPressedDispatcher.addCallback(this@MainActivity, backBlocker)
-                onDispose { backBlocker.remove() }
+                // every destination change re-adds the blocker → always top precedence
+                navController.currentBackStackEntryFlow.collect {
+                    backBlocker.remove()
+                    onBackPressedDispatcher.addCallback(this@MainActivity, backBlocker)
+                }
             }
 
             PhotoCompareTheme(darkTheme = darkTheme, dynamicColor = prefs.dynamicColor) {
