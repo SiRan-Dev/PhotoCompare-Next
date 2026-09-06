@@ -177,7 +177,12 @@ fun CompareScreen(
                     Text(text = stringResource(R.string.sync_state), style = MaterialTheme.typography.bodySmall)
                     Switch(
                         checked = prefs.syncZoomAndPan,
-                        onCheckedChange = { sessionViewModel.setSyncZoomAndPan(it) },
+                        onCheckedChange = {
+                            sessionViewModel.setSyncZoomAndPan(it)
+                            // toggling sync mode resets both panes to fit so the two photos
+                            // start from a clean, comparable state
+                            mediator.resetState()
+                        },
                         modifier = Modifier.padding(horizontal = 8.dp),
                     )
                     IconButton(onClick = { mediator.resetState() }) {
