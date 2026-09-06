@@ -44,6 +44,7 @@
     <string name="update_media_access">管理</string>
     <string name="media_access_disclaimer">您已授予对您的媒体的访问权限。 这可以在这里更改。</string>
 
+    <string name="action_open_in_gallery">在相册中打开</string>
     <string name="action_settings">设置</string>
     <string name="section_appearance">外观</string>
     <string name="section_gestures">手势</string>

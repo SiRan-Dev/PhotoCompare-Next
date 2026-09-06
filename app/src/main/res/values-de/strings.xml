@@ -47,6 +47,7 @@
     <string name="delete_unselected_dcim_title">Aktion nicht unterstützt</string>
 
     <string name="action_settings">Einstellungen</string>
+    <string name="action_open_in_gallery">In Galerie öffnen</string>
     <string name="section_appearance">Erscheinungsbild</string>
     <string name="section_gestures">Gesten</string>
     <string name="section_about">Über</string>

@@ -1,5 +1,8 @@
 package com.sirandev.photocompare.ui.compare
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.view.TextureView
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -24,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MotionPhotosOn
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
@@ -271,6 +275,20 @@ private fun leaveCompare(sessionViewModel: SessionViewModel, mediator: CompareMe
 }
 
 /**
+ * Opens [uri] in the system gallery (whatever app resolves the image view intent, e.g.
+ * Xiaomi 相册), positioned on this exact photo.
+ */
+private fun openInGallery(context: Context, uri: Uri) {
+    runCatching {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW)
+                .setDataAndType(uri, "image/*")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+        )
+    }
+}
+
+/**
  * The exact graphics-layer transform used to draw the still image (scale relative to source
  * pixels, top-left origin, viewport-centering translations). Applied verbatim to the live
  * photo video overlay so motion frames land pixel-perfectly on top of the photo.
@@ -347,6 +365,7 @@ private fun ComparePane(
     val pagerState = rememberPagerState(initialPage = initial.coerceIn(0, images.size - 1), pageCount = { images.size })
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
+    val paneContext = LocalContext.current
 
     // register the active page's zoom state with the mediator bridge
     val activePage by remember { derivedStateOf { pagerState.settledPage } }
@@ -530,27 +549,46 @@ private fun ComparePane(
             }
         }
 
-        // navigation arrows: short press ±1, long press jumps relative to the other pane's page
-        Row(
+        // navigation bar: arrows short press ±1, long press jumps relative to the other
+        // pane's page; the trailing button opens this pane's CURRENT photo in the gallery
+        Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .background(Color.Black.copy(alpha = 0.25f)),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
         ) {
-            NavArrow(
-                icon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                contentDescription = stringResource(R.string.action_nav_left),
-                onClick = { scope.launch { step(pagerState, -1) } },
-                onLongClick = { scope.launch { jumpRelativeOther(mediator, bridge, pagerState, -1) } },
-            )
-            NavArrow(
-                icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = stringResource(R.string.action_nav_right),
-                onClick = { scope.launch { step(pagerState, 1) } },
-                onLongClick = { scope.launch { jumpRelativeOther(mediator, bridge, pagerState, 1) } },
-            )
+            Row(
+                modifier = Modifier.align(Alignment.Center),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                NavArrow(
+                    icon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                    contentDescription = stringResource(R.string.action_nav_left),
+                    onClick = { scope.launch { step(pagerState, -1) } },
+                    onLongClick = { scope.launch { jumpRelativeOther(mediator, bridge, pagerState, -1) } },
+                )
+                NavArrow(
+                    icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = stringResource(R.string.action_nav_right),
+                    onClick = { scope.launch { step(pagerState, 1) } },
+                    onLongClick = { scope.launch { jumpRelativeOther(mediator, bridge, pagerState, 1) } },
+                )
+            }
+            IconButton(
+                onClick = {
+                    images.getOrNull(bridge.activePage)?.let { bean ->
+                        openInGallery(paneContext, bean.contentUri)
+                    }
+                },
+                modifier = Modifier.align(Alignment.CenterEnd),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.PhotoLibrary,
+                    contentDescription = stringResource(R.string.action_open_in_gallery),
+                    tint = Color.White,
+                )
+            }
         }
     }
 }
