@@ -47,4 +47,14 @@
     <string name="media_access_disclaimer">You\'ve granted selective access to your media. This can be changed here.</string>
     <string name="delete_unselected_dcim_message">This folder seems to be the main camera folder, for which \"delete others\" is not allowed.</string>
     <string name="delete_unselected_dcim_title">Action not allowed</string>
+
+    <string name="theme_settings">Theme</string>
+    <string name="theme_mode">Theme mode</string>
+    <string name="theme_mode_system">System</string>
+    <string name="theme_mode_light">Light</string>
+    <string name="theme_mode_dark">Dark</string>
+    <string name="dynamic_color">Dynamic color</string>
+    <string name="delete_confirmation_count">This action will delete %1$d image(s).</string>
+    <string name="delete_unselected_confirmation_count">This action will delete %1$d unselected image(s).</string>
+    <string name="action_delete">Delete</string>
 </resources>

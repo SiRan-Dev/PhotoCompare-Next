@@ -45,4 +45,14 @@
     <string name="media_access_disclaimer">Der selektive Zugriff auf die Medienbibliothek kann hier angepasst werden.</string>
     <string name="delete_unselected_dcim_message">Dies scheint das Kamera-Verzeichnis zu sein, für welches \"Alle anderen löschen\" nicht erlaubt ist.</string>
     <string name="delete_unselected_dcim_title">Aktion nicht unterstützt</string>
+
+    <string name="theme_settings">Design</string>
+    <string name="theme_mode">Designmodus</string>
+    <string name="theme_mode_system">System</string>
+    <string name="theme_mode_light">Hell</string>
+    <string name="theme_mode_dark">Dunkel</string>
+    <string name="dynamic_color">Dynamische Farben</string>
+    <string name="delete_confirmation_count">Diese Aktion löscht %1$d Bild(er).</string>
+    <string name="delete_unselected_confirmation_count">Diese Aktion löscht %1$d nicht ausgewählte Bild(er).</string>
+    <string name="action_delete">Löschen</string>
 </resources>

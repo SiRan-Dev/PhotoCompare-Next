@@ -43,4 +43,14 @@
     <string name="use_filenames_for_sort">使用文件名排序</string>
     <string name="update_media_access">管理</string>
     <string name="media_access_disclaimer">您已授予对您的媒体的访问权限。 这可以在这里更改。</string>
+
+    <string name="theme_settings">主题</string>
+    <string name="theme_mode">主题模式</string>
+    <string name="theme_mode_system">跟随系统</string>
+    <string name="theme_mode_light">浅色</string>
+    <string name="theme_mode_dark">深色</string>
+    <string name="dynamic_color">动态取色</string>
+    <string name="delete_confirmation_count">此操作将删除 %1$d 张图片。</string>
+    <string name="delete_unselected_confirmation_count">此操作将删除 %1$d 张未选择的图片。</string>
+    <string name="action_delete">删除</string>
 </resources>
