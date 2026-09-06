@@ -44,12 +44,4 @@ class SelectImagePoolViewModel(application: Application) : AndroidViewModel(appl
             refresh()
         }
     }
-
-    fun updateThemeMode(mode: com.sirandev.photocompare.data.prefs.ThemeMode) {
-        viewModelScope.launch { prefsRepository.setThemeMode(mode) }
-    }
-
-    fun updateDynamicColor(value: Boolean) {
-        viewModelScope.launch { prefsRepository.setDynamicColor(value) }
-    }
 }

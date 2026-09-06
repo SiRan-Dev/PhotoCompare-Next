@@ -23,6 +23,11 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 /**
+ * App theme on Material 3 (stable line). The expressive *components* (SegmentedButton,
+ * tonal icon buttons, PullToRefreshBox, ListItem settings rows, …) are used across the
+ * app; the [MaterialExpressiveTheme]/MotionScheme theming entry points are still
+ * `internal` in the current stable material3 and will be adopted once stabilized.
+ *
  * @param darkTheme    whether to use the dark color scheme
  * @param dynamicColor dynamic color on Android 12+ (Material You wallpaper palette)
  */

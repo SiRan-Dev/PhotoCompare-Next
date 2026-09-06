@@ -8,6 +8,7 @@ import com.sirandev.photocompare.data.ImagePoolQuery
 import com.sirandev.photocompare.data.mediastore.MediaStoreRepository
 import com.sirandev.photocompare.data.prefs.PhotoComparePrefs
 import com.sirandev.photocompare.data.prefs.PreferencesRepository
+import com.sirandev.photocompare.data.prefs.ThemeMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -86,6 +87,12 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     fun setShowExifDetails(value: Boolean) = launchPref { prefsRepository.setShowExifDetails(value) }
 
     fun setCheckboxStyleDark(value: Boolean) = launchPref { prefsRepository.setCheckboxStyleDark(value) }
+
+    fun setThemeMode(value: ThemeMode) = launchPref { prefsRepository.setThemeMode(value) }
+
+    fun setDynamicColor(value: Boolean) = launchPref { prefsRepository.setDynamicColor(value) }
+
+    fun setPredictiveBack(value: Boolean) = launchPref { prefsRepository.setPredictiveBack(value) }
 
     private inline fun launchPref(crossinline block: suspend () -> Unit) {
         viewModelScope.launch { block() }

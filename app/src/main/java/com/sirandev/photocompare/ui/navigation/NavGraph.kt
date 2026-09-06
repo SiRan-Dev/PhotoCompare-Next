@@ -13,6 +13,7 @@ import com.sirandev.photocompare.ui.images.ListImagesScreen
 import com.sirandev.photocompare.ui.pool.SelectImagePoolScreen
 import com.sirandev.photocompare.ui.selected.SelectedImagesScreen
 import com.sirandev.photocompare.ui.session.SessionViewModel
+import com.sirandev.photocompare.ui.settings.SettingsScreen
 
 @Composable
 fun PhotoCompareNavHost() {
@@ -29,6 +30,13 @@ fun PhotoCompareNavHost() {
                     sessionViewModel.openDate(dayStartMillis)
                     navController.navigate(AppRoutes.IMAGES)
                 },
+                onOpenSettings = { navController.navigate(AppRoutes.SETTINGS) },
+            )
+        }
+        composable(AppRoutes.SETTINGS) {
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                sessionViewModel = sessionViewModel,
             )
         }
         composable(AppRoutes.IMAGES) {

@@ -25,6 +25,7 @@ data class PhotoComparePrefs(
     val showExifDetails: Boolean = true,
     val checkboxStyleDark: Boolean = true,
     val syncZoomAndPan: Boolean = true,
+    val predictiveBack: Boolean = false,
 )
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "photo_compare_prefs")
@@ -39,6 +40,7 @@ class PreferencesRepository(private val context: Context) {
         val SHOW_EXIF_DETAILS = booleanPreferencesKey("show_exif_details")
         val CHECKBOX_STYLE_DARK = booleanPreferencesKey("checkbox_style_dark")
         val SYNC_ZOOM_AND_PAN = booleanPreferencesKey("sync_zoom_and_pan")
+        val PREDICTIVE_BACK = booleanPreferencesKey("predictive_back")
     }
 
     val prefs: Flow<PhotoComparePrefs> = context.dataStore.data.map { p ->
@@ -50,6 +52,7 @@ class PreferencesRepository(private val context: Context) {
             showExifDetails = p[Keys.SHOW_EXIF_DETAILS] ?: true,
             checkboxStyleDark = p[Keys.CHECKBOX_STYLE_DARK] ?: true,
             syncZoomAndPan = p[Keys.SYNC_ZOOM_AND_PAN] ?: true,
+            predictiveBack = p[Keys.PREDICTIVE_BACK] ?: false,
         )
     }
 
@@ -60,4 +63,5 @@ class PreferencesRepository(private val context: Context) {
     suspend fun setShowExifDetails(value: Boolean) = context.dataStore.edit { it[Keys.SHOW_EXIF_DETAILS] = value }
     suspend fun setCheckboxStyleDark(value: Boolean) = context.dataStore.edit { it[Keys.CHECKBOX_STYLE_DARK] = value }
     suspend fun setSyncZoomAndPan(value: Boolean) = context.dataStore.edit { it[Keys.SYNC_ZOOM_AND_PAN] = value }
+    suspend fun setPredictiveBack(value: Boolean) = context.dataStore.edit { it[Keys.PREDICTIVE_BACK] = value }
 }

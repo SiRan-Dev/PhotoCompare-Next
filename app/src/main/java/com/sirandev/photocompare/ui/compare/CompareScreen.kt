@@ -555,6 +555,10 @@ private fun ComparePane(
     }
 }
 
+/**
+ * Tap = step ±1, long-press = jump relative to the other pane. Uses foundation's official
+ * [combinedClickable]: no Material button component exposes a long-press callback.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun NavArrow(

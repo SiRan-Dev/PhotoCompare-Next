@@ -5,4 +5,5 @@ object AppRoutes {
     const val IMAGES = "images"
     const val COMPARE = "compare"
     const val SELECTED = "selected"
+    const val SETTINGS = "settings"
 }

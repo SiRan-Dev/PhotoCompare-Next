@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,20 +17,17 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -54,8 +50,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.sirandev.photocompare.R
 import com.sirandev.photocompare.data.ImageBean
-import com.sirandev.photocompare.data.prefs.PhotoComparePrefs
-import com.sirandev.photocompare.data.prefs.ThemeMode
 import com.sirandev.photocompare.util.Permissions
 import java.io.File
 import java.text.DateFormat
@@ -69,14 +63,13 @@ import java.util.Date
 fun SelectImagePoolScreen(
     onOpenFolder: (String) -> Unit,
     onOpenDate: (Long) -> Unit,
+    onOpenSettings: () -> Unit,
     viewModel: SelectImagePoolViewModel = viewModel(),
 ) {
     val folders by viewModel.folders.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
-    val prefs by viewModel.prefs.collectAsState()
 
     var hasMediaAccess by remember { mutableStateOf(Permissions.hasMediaAccess(viewModel.getApplication())) }
-    var showThemeDialog by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
@@ -103,8 +96,8 @@ fun SelectImagePoolScreen(
                     IconButton(onClick = { viewModel.refresh() }) {
                         Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.action_loading_images))
                     }
-                    IconButton(onClick = { showThemeDialog = true }) {
-                        Icon(Icons.Filled.Palette, contentDescription = stringResource(R.string.theme_settings))
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.action_settings))
                     }
                 },
             )
@@ -139,15 +132,6 @@ fun SelectImagePoolScreen(
                 showDatePicker = false
                 onOpenDate(millis)
             },
-        )
-    }
-
-    if (showThemeDialog) {
-        ThemeSettingsDialog(
-            prefs = prefs,
-            onSetThemeMode = { viewModel.updateThemeMode(it) },
-            onSetDynamicColor = { viewModel.updateDynamicColor(it) },
-            onDismiss = { showThemeDialog = false },
         )
     }
 }
@@ -272,53 +256,4 @@ private fun DatePickerWithApply(
             )
         }
     }
-}
-
-@Composable
-fun ThemeSettingsDialog(
-    prefs: PhotoComparePrefs,
-    onSetThemeMode: (ThemeMode) -> Unit,
-    onSetDynamicColor: (Boolean) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text(text = stringResource(android.R.string.ok)) }
-        },
-        title = { Text(text = stringResource(R.string.theme_settings)) },
-        text = {
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = stringResource(R.string.theme_mode), modifier = Modifier.weight(1f))
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                    ThemeMode.entries.forEach { mode ->
-                        FilterChip(
-                            selected = prefs.themeMode == mode,
-                            onClick = { onSetThemeMode(mode) },
-                            label = {
-                                Text(
-                                    text = stringResource(
-                                        when (mode) {
-                                            ThemeMode.SYSTEM -> R.string.theme_mode_system
-                                            ThemeMode.LIGHT -> R.string.theme_mode_light
-                                            ThemeMode.DARK -> R.string.theme_mode_dark
-                                        },
-                                    ),
-                                )
-                            },
-                        )
-                    }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp)) {
-                    Text(text = stringResource(R.string.dynamic_color), modifier = Modifier.weight(1f))
-                    Switch(
-                        checked = prefs.dynamicColor,
-                        onCheckedChange = onSetDynamicColor,
-                    )
-                }
-            }
-        },
-    )
 }
