@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Monochrome layer for Android 13+ themed icons (Material You dynamic color): the
+    launcher recolors this single-channel glyph with the wallpaper palette. Outline photo
+    card + comparison divider + slider handle with chevron cutouts.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- photo card ring -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M30,30 H78 Q84,30 84,36 V72 Q84,78 78,78 H30 Q24,78 24,72 V36 Q24,30 30,30 Z M31,34 H77 Q80,34 80,37 V71 Q80,74 77,74 H31 Q28,74 28,71 V37 Q28,34 31,34 Z" />
+
+    <!-- comparison divider (split above/below the handle) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M52.5,34 H55.5 V47 H52.5 Z M52.5,61 H55.5 V74 H52.5 Z" />
+
+    <!-- slider handle with chevron cutouts -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M46.5,54 a7.5,7.5 0 1,0 15,0 a7.5,7.5 0 1,0 -15,0 Z M52.9,50.5 L49.3,54 L52.9,57.5 Z M55.1,50.5 L58.7,54 L55.1,57.5 Z" />
+</vector>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Launcher foreground: "photo compare" = two photo tiles side by side (a cool shot vs a
+    warm shot, each with the classic mountain-and-sun photo pictogram) joined by a
+    compare-slider handle with left/right chevrons. Content stays inside the adaptive-icon
+    safe zone (circle r=33 around 54,54).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- left photo tile (cool shot, primary) -->
+    <path
+        android:fillColor="#4A6572"
+        android:pathData="M30,30 H52.5 V78 H30 Q24,78 24,72 V36 Q24,30 30,30 Z" />
+
+    <!-- right photo tile (warm shot, secondary) -->
+    <path
+        android:fillColor="#8D6E63"
+        android:pathData="M55.5,30 H78 Q84,30 84,36 V72 Q84,78 78,78 H55.5 Z" />
+
+    <!-- left tile: sun + mountain -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M31.5,44 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 Z M29,67 L39,50 L45,58 L49,53 L51.5,58.5 V67 Z" />
+
+    <!-- right tile: sun + mountain -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M73.75,44 a2.75,2.75 0 1,0 5.5,0 a2.75,2.75 0 1,0 -5.5,0 Z M57.5,67 L65,52 L70.5,60 L74.5,55.5 L79.5,67 Z" />
+
+    <!-- compare-slider handle across both tiles -->
+    <path
+        android:fillColor="#4A6572"
+        android:pathData="M46.5,54 a7.5,7.5 0 1,0 15,0 a7.5,7.5 0 1,0 -15,0 Z" />
+
+    <!-- left/right chevrons inside the handle -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M52.9,50.5 L49.3,54 L52.9,57.5 Z M55.1,50.5 L58.7,54 L55.1,57.5 Z" />
+</vector>
