@@ -6,24 +6,18 @@ import android.net.Uri
 import android.view.TextureView
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MotionPhotosOn
@@ -59,7 +53,6 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -367,7 +360,6 @@ private fun ComparePane(
     val zoomStates = remember { mutableMapOf<Int, ZoomableState>() }
     val initial = remember(images) { deriveInitialIndex(initialIndex, images.size) }
     val pagerState = rememberPagerState(initialPage = initial.coerceIn(0, images.size - 1), pageCount = { images.size })
-    val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val paneContext = LocalContext.current
 
@@ -553,83 +545,24 @@ private fun ComparePane(
             }
         }
 
-        // navigation bar: arrows short press ±1, long press jumps relative to the other
-        // pane's page; the trailing button opens this pane's CURRENT photo in the gallery
-        Box(
+        // open this pane's CURRENT photo in the system gallery
+        IconButton(
+            onClick = {
+                images.getOrNull(bridge.activePage)?.let { bean ->
+                    openInGallery(paneContext, bean.contentUri)
+                }
+            },
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .background(Color.Black.copy(alpha = 0.25f)),
+                .align(Alignment.BottomEnd)
+                .padding(10.dp),
         ) {
-            Row(
-                modifier = Modifier.align(Alignment.Center),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                NavArrow(
-                    icon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = stringResource(R.string.action_nav_left),
-                    onClick = { scope.launch { step(pagerState, -1) } },
-                    onLongClick = { scope.launch { jumpRelativeOther(mediator, bridge, pagerState, -1) } },
-                )
-                NavArrow(
-                    icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = stringResource(R.string.action_nav_right),
-                    onClick = { scope.launch { step(pagerState, 1) } },
-                    onLongClick = { scope.launch { jumpRelativeOther(mediator, bridge, pagerState, 1) } },
-                )
-            }
-            IconButton(
-                onClick = {
-                    images.getOrNull(bridge.activePage)?.let { bean ->
-                        openInGallery(paneContext, bean.contentUri)
-                    }
-                },
-                modifier = Modifier.align(Alignment.CenterEnd),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.PhotoLibrary,
-                    contentDescription = stringResource(R.string.action_open_in_gallery),
-                    tint = Color.White,
-                )
-            }
+            Icon(
+                imageVector = Icons.Filled.PhotoLibrary,
+                contentDescription = stringResource(R.string.action_open_in_gallery),
+                tint = Color.White,
+            )
         }
     }
-}
-
-/**
- * Tap = step ±1, long-press = jump relative to the other pane. Uses foundation's official
- * [combinedClickable]: no Material button component exposes a long-press callback.
- */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun NavArrow(
-    icon: ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, contentDescription = contentDescription, tint = Color.White)
-    }
-}
-
-private suspend fun step(pagerState: PagerState, delta: Int) {
-    if (pagerState.pageCount == 0) return
-    val target = (pagerState.settledPage + delta).coerceIn(0, pagerState.pageCount - 1)
-    pagerState.animateScrollToPage(target)
-}
-
-private suspend fun jumpRelativeOther(mediator: CompareMediator, bridge: PaneBridgeImpl, pagerState: PagerState, delta: Int) {
-    if (pagerState.pageCount == 0) return
-    val otherIndex = if (bridge.side == PaneSide.TOP) mediator.getBottomIndex() else mediator.getTopIndex()
-    val target = (otherIndex + delta).coerceIn(0, pagerState.pageCount - 1)
-    pagerState.animateScrollToPage(target)
 }
 
 private fun deriveInitialIndex(initialIndex: Int, size: Int): Int {
