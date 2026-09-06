@@ -2,10 +2,10 @@ package com.sirandev.photocompare.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.sirandev.photocompare.ui.AppRoutes
 import com.sirandev.photocompare.ui.compare.CompareScreen
@@ -16,9 +16,10 @@ import com.sirandev.photocompare.ui.session.SessionViewModel
 import com.sirandev.photocompare.ui.settings.SettingsScreen
 
 @Composable
-fun PhotoCompareNavHost() {
-    val navController = rememberNavController()
-    val sessionViewModel: SessionViewModel = viewModel()
+fun PhotoCompareNavHost(
+    navController: NavHostController,
+    sessionViewModel: SessionViewModel = viewModel(),
+) {
     NavHost(navController = navController, startDestination = AppRoutes.POOL) {
         composable(AppRoutes.POOL) {
             SelectImagePoolScreen(
