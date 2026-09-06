@@ -44,6 +44,7 @@ class ZoomableState {
         get() = _bitmapScale
         set(value) {
             _bitmapScale = if (value > 0f) value else 1f
+            debugLog("bitmapScale=$_bitmapScale")
         }
 
     var minScale: Float = 1f
@@ -72,6 +73,13 @@ class ZoomableState {
     @PublishedApi
     internal var suppressionCount = 0
 
+    /**
+     * Whether the user has actually zoomed this image. Guards the fit-state reset in
+     * [onLayout]: a stray pan must not count as interaction, otherwise scale can stay stuck
+     * at its pre-layout value of 1 and the image renders at full size from the top-left.
+     */
+    private var userZoomed = false
+
     /** Layout pass; resets zoom limits and clamps the current state. */
     fun onLayout(widthPx: Float, heightPx: Float) {
         if (widthPx <= 0f || heightPx <= 0f) return
@@ -80,9 +88,10 @@ class ZoomableState {
         recomputeLimits()
         // onImageLoaded may run before the first layout (viewport still unknown → minScale
         // was 1), which leaves scale stuck at 1; re-establish the fit state until the user
-        // has actually interacted (center == null means no gesture ever happened)
-        if (center == null) {
+        // has zoomed for real
+        if (!userZoomed) {
             scale = minScale
+            center = null
         }
     }
 
@@ -91,6 +100,7 @@ class ZoomableState {
         val w = if (rotationSwapped) heightPx else widthPx
         val h = if (rotationSwapped) widthPx else heightPx
         srcSize = Dim(w, h)
+        userZoomed = false
         recomputeLimits()
         scale = minScale
         center = null
@@ -101,8 +111,10 @@ class ZoomableState {
         minScale = min(viewportWidth / srcSize.width, viewportHeight / srcSize.height)
         // allow zooming up to 100% pixel view (or 12× fit for small images)
         maxScale = max(1f, minScale * 12f)
-        scale = scale.coerceIn(minScale, maxScale)
-        center?.let { center = CompareMath.clampCenter(it, srcSize, viewportWidth, viewportHeight, scale) }
+        if (userZoomed) {
+            scale = scale.coerceIn(minScale, maxScale)
+            center?.let { center = CompareMath.clampCenter(it, srcSize, viewportWidth, viewportHeight, scale) }
+        }
     }
 
     /**
@@ -119,6 +131,7 @@ class ZoomableState {
             val currentCenter = center ?: F2(srcSize.width / 2f, srcSize.height / 2f)
             center = CompareMath.zoomAroundCentroid(currentCenter, F2(centroidX, centroidY), scale, newScale, viewportWidth, viewportHeight)
             scale = newScale
+            userZoomed = true
             changed = true
         }
         // pan only when there is pan room
@@ -151,9 +164,26 @@ class ZoomableState {
         if (!isReady) return
         scale = newScale.coerceIn(minScale, maxScale)
         center = newCenter?.let { CompareMath.clampCenter(it, srcSize, viewportWidth, viewportHeight, scale) }
+        debugLog("setScaleAndCenter: s=$scale c=$center")
+    }
+
+    private fun debugLog(msg: String) {
+        android.util.Log.d("PhotoCompare-Zoom", "$msg | viewport=${viewportWidth}x$viewportHeight src=${srcSize.width}x${srcSize.height} bs=$_bitmapScale minS=$minScale scale=$scale")
+    }
+
+    private var lastRenderLog = ""
+
+    /** Called from the graphicsLayer block to log the values actually used for drawing. */
+    fun debugRender(scaleX: Float, tx: Float, ty: Float, w: Float, h: Float) {
+        val key = "s=$scaleX tx=$tx ty=$ty w=$w h=$h"
+        if (key != lastRenderLog) {
+            lastRenderLog = key
+            debugLog("RENDER $key")
+        }
     }
 
     fun reset() {
+        userZoomed = false
         scale = minScale
         center = null
     }

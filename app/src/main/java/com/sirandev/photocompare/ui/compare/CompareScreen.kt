@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -85,9 +86,9 @@ import com.sirandev.photocompare.ui.session.SessionViewModel
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import coil3.size.Size
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -346,17 +347,6 @@ private fun ComparePane(
                 meta = loaded
                 loaded?.let { zoom.onImageLoaded(it.width, it.height, it.rotationSwapped) }
             }
-            // decoded bitmap size arrives via the Coil success callback, which may fire before
-            // or after `meta`; derive bitmapScale from both states so the order never matters.
-            // Both sides are display-space: Coil applies EXIF rotation when decoding, and
-            // zoom.srcSize is orientation-corrected by onImageLoaded().
-            var decodedSize by remember(bean.contentUri) { mutableStateOf<android.util.Size?>(null) }
-            LaunchedEffect(decodedSize, meta) {
-                val d = decodedSize
-                if (d != null && meta != null && d.width > 0 && zoom.srcSize.width > 0f) {
-                    zoom.bitmapScale = d.width / zoom.srcSize.width
-                }
-            }
             // live photo detection (badge) & playback (long-press)
             var liveInfo by remember(bean.contentUri) { mutableStateOf<LivePhotoInfo?>(null) }
             LaunchedEffect(bean.contentUri) {
@@ -383,53 +373,62 @@ private fun ComparePane(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .clipToBounds()
                     .onSizeChanged { zoom.onLayout(it.width.toFloat(), it.height.toFloat()) },
             ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(bean.contentUri)
-                        .size(decodeTargetSize(viewportPx.first, viewportPx.second))
-                        .crossfade(false)
-                        .build(),
-                    contentDescription = bean.displayName,
-                    contentScale = ContentScale.None,
-                    alignment = Alignment.TopStart,
-                    onSuccess = { result ->
-                        val intrinsic = result.painter.intrinsicSize
-                        if (intrinsic.width > 0f && intrinsic.height > 0f) {
-                            decodedSize = android.util.Size(intrinsic.width.toInt(), intrinsic.height.toInt())
-                            if (zoom.srcSize.width <= 0f) {
-                                // metadata not yet available: adopt the decoded size as a
-                                // provisional source so the pane renders correctly right away;
-                                // refined to true dimensions when meta arrives
-                                zoom.onImageLoaded(intrinsic.width, intrinsic.height, false)
-                            }
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clipToBounds()
-                        .zoomable(
-                            state = zoom,
-                            onLongPressStart = { startLivePhoto() },
-                            onLongPressEnd = { stopLivePhoto() },
-                        )
-                        .graphicsLayer {
-                            transformOrigin = TransformOrigin(0f, 0f)
-                            val bs = zoom.bitmapScale
-                            scaleX = zoom.scale / bs
-                            scaleY = zoom.scale / bs
-                            val center = zoom.center
-                            if (center != null) {
-                                translationX = size.width / 2f - center.x * zoom.scale
-                                translationY = size.height / 2f - center.y * zoom.scale
-                            } else {
-                                // fit state: the drawn content spans srcSize × scale, centered in the viewport
-                                translationX = size.width / 2f - (zoom.srcSize.width * zoom.scale) / 2f
-                                translationY = size.height / 2f - (zoom.srcSize.height * zoom.scale) / 2f
-                            }
-                        },
-                )
+                val m = meta
+                if (m != null) {
+                    // Deterministic decode+layout: Coil resolves the decode from the COMPOSABLE
+                    // constraints (request-level size/scale/precision are ignored), so control
+                    // the constraints instead: requiredSize = srcSize × k (same aspect as the
+                    // source) → no crop; Precision.EXACT pins the bitmap to exactly k × srcSize,
+                    // making bitmapScale == k an exact invariant.
+                    val k = decodeScale(m.width, m.height, viewportPx.first, viewportPx.second)
+                    LaunchedEffect(bean.contentUri, k) {
+                        zoom.bitmapScale = k
+                    }
+                    val contentW = with(density) { (m.width * k).roundToInt().coerceAtLeast(1).toFloat().toDp() }
+                    val contentH = with(density) { (m.height * k).roundToInt().coerceAtLeast(1).toFloat().toDp() }
+                    AsyncImage(
+                        model = ImageRequest.Builder(pageContext)
+                            .data(bean.contentUri)
+                            .size(
+                                (m.width * k).roundToInt().coerceAtLeast(1),
+                                (m.height * k).roundToInt().coerceAtLeast(1),
+                            )
+                            .precision(coil3.size.Precision.EXACT)
+                            .crossfade(false)
+                            .build(),
+                        contentDescription = bean.displayName,
+                        contentScale = ContentScale.FillBounds,
+                        alignment = Alignment.TopStart,
+                        modifier = Modifier
+                            .requiredSize(contentW, contentH)
+                            .zoomable(
+                                state = zoom,
+                                onLongPressStart = { startLivePhoto() },
+                                onLongPressEnd = { stopLivePhoto() },
+                            )
+                            .graphicsLayer {
+                                transformOrigin = TransformOrigin(0f, 0f)
+                                val bs = zoom.bitmapScale
+                                scaleX = zoom.scale / bs
+                                scaleY = zoom.scale / bs
+                                val center = zoom.center
+                                if (center != null) {
+                                    translationX = size.width / 2f - center.x * zoom.scale
+                                    translationY = size.height / 2f - center.y * zoom.scale
+                                } else {
+                                    // fit state: the drawn content spans srcSize × scale, centered in the viewport
+                                    translationX = size.width / 2f - (zoom.srcSize.width * zoom.scale) / 2f
+                                    translationY = size.height / 2f - (zoom.srcSize.height * zoom.scale) / 2f
+                                }
+                            },
+                    )
+                } else {
+                    // metadata still loading — placeholder keeps the pane stable
+                    Box(modifier = Modifier.fillMaxSize().background(Color.Black))
+                }
 
                 // live photo playback overlay
                 if (playingLivePhoto) {
@@ -551,16 +550,16 @@ private fun deriveInitialIndex(initialIndex: Int, size: Int): Int {
 }
 
 /**
- * Coil decode target: ~2.5× the viewport, capped at [MAX_DECODED_PIXELS] to prevent OOM.
+ * Decode scale for one pane: ~[VIEWPORT_LOAD_FACTOR]× the viewport, capped at
+ * [MAX_DECODED_PIXELS] and never upscaled. The request is built as srcSize × this factor
+ * with Scale.FIT + Precision.EXACT, so the decoded bitmap is exactly this factor × srcSize.
  */
-private fun decodeTargetSize(viewportW: Float, viewportH: Float): Size {
-    var w = (viewportW * VIEWPORT_LOAD_FACTOR).toInt().coerceAtLeast(1)
-    var h = (viewportH * VIEWPORT_LOAD_FACTOR).toInt().coerceAtLeast(1)
-    val pixels = w.toDouble() * h
-    if (pixels > MAX_DECODED_PIXELS) {
-        val factor = sqrt(MAX_DECODED_PIXELS / pixels)
-        w = (w * factor).toInt().coerceAtLeast(1)
-        h = (h * factor).toInt().coerceAtLeast(1)
-    }
-    return Size(w, h)
+private fun decodeScale(srcW: Float, srcH: Float, viewportW: Float, viewportH: Float): Float {
+    val srcPixels = srcW.toDouble() * srcH
+    val target = minOf(
+        viewportW * VIEWPORT_LOAD_FACTOR / srcW,
+        viewportH * VIEWPORT_LOAD_FACTOR / srcH,
+        sqrt(MAX_DECODED_PIXELS / srcPixels).toFloat(),
+    )
+    return target.coerceIn(0.02f, 1f)
 }
