@@ -192,24 +192,28 @@ fun CompareScreen(
                     IconButton(onClick = { mediator.resetState() }) {
                         Icon(Icons.Filled.CenterFocusStrong, contentDescription = stringResource(R.string.action_compare_images))
                     }
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Filled.MoreVert, contentDescription = null)
-                    }
-                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                        DropdownMenuItem(
-                            text = { Text(text = stringResource(R.string.show_exif)) },
-                            trailingIcon = { Checkbox(checked = prefs.showExifDetails, onCheckedChange = null) },
-                            onClick = { sessionViewModel.setShowExifDetails(!prefs.showExifDetails) },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(text = stringResource(R.string.checkbox_dark)) },
-                            trailingIcon = { Checkbox(checked = prefs.checkboxStyleDark, onCheckedChange = null) },
-                            onClick = { sessionViewModel.setCheckboxStyleDark(!prefs.checkboxStyleDark) },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(text = stringResource(R.string.show_selection)) },
-                            onClick = { navController.navigate(AppRoutes.SELECTED) },
-                        )
+                    // Box anchors the dropdown exactly to the ⋮ icon (a sibling DropdownMenu
+                    // inside the actions Row resolves its anchor position unreliably)
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Filled.MoreVert, contentDescription = null)
+                        }
+                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text(text = stringResource(R.string.show_exif)) },
+                                trailingIcon = { Checkbox(checked = prefs.showExifDetails, onCheckedChange = null) },
+                                onClick = { sessionViewModel.setShowExifDetails(!prefs.showExifDetails) },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(text = stringResource(R.string.checkbox_dark)) },
+                                trailingIcon = { Checkbox(checked = prefs.checkboxStyleDark, onCheckedChange = null) },
+                                onClick = { sessionViewModel.setCheckboxStyleDark(!prefs.checkboxStyleDark) },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(text = stringResource(R.string.show_selection)) },
+                                onClick = { navController.navigate(AppRoutes.SELECTED) },
+                            )
+                        }
                     }
                 },
             )

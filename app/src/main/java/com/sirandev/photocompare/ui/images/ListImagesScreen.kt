@@ -107,20 +107,23 @@ fun ListImagesScreen(
                     IconButton(onClick = onShowSelection, enabled = images.any { it.selected }) {
                         Icon(Icons.Filled.Compare, contentDescription = stringResource(R.string.show_selection))
                     }
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Filled.MoreVert, contentDescription = null)
-                    }
-                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                        DropdownMenuItem(
-                            text = { Text(text = stringResource(R.string.show_newest_first)) },
-                            trailingIcon = { Checkbox(checked = prefs.sortNewestFirst, onCheckedChange = null) },
-                            onClick = { sessionViewModel.setSortNewestFirst(!prefs.sortNewestFirst) },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(text = stringResource(R.string.use_filenames_for_sort)) },
-                            trailingIcon = { Checkbox(checked = prefs.filenamesForSort, onCheckedChange = null) },
-                            onClick = { sessionViewModel.setFilenamesForSort(!prefs.filenamesForSort) },
-                        )
+                    // Box anchors the dropdown exactly to the ⋮ icon
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Filled.MoreVert, contentDescription = null)
+                        }
+                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text(text = stringResource(R.string.show_newest_first)) },
+                                trailingIcon = { Checkbox(checked = prefs.sortNewestFirst, onCheckedChange = null) },
+                                onClick = { sessionViewModel.setSortNewestFirst(!prefs.sortNewestFirst) },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(text = stringResource(R.string.use_filenames_for_sort)) },
+                                trailingIcon = { Checkbox(checked = prefs.filenamesForSort, onCheckedChange = null) },
+                                onClick = { sessionViewModel.setFilenamesForSort(!prefs.filenamesForSort) },
+                            )
+                        }
                     }
                 },
             )
