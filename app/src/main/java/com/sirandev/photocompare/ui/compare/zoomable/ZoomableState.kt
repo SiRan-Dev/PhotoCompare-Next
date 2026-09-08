@@ -168,7 +168,7 @@ class ZoomableState {
     }
 
     private fun debugLog(msg: String) {
-        android.util.Log.d("PhotoCompare-Zoom", "$msg | viewport=${viewportWidth}x$viewportHeight src=${srcSize.width}x${srcSize.height} bs=$_bitmapScale minS=$minScale scale=$scale")
+        android.util.Log.d("PhotoCompareNext-Zoom", "$msg | viewport=${viewportWidth}x$viewportHeight src=${srcSize.width}x${srcSize.height} bs=$_bitmapScale minS=$minScale scale=$scale")
     }
 
     private var lastRenderLog = ""

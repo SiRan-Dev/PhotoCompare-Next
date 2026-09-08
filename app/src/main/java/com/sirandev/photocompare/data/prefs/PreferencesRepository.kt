@@ -15,9 +15,9 @@ enum class ThemeMode {
 }
 
 /**
- * User settings, ported from the original SharedPreferences-backed PhotoComparePreferences.
+ * User settings, ported from the original SharedPreferences-backed PhotoCompareNextPreferences.
  */
-data class PhotoComparePrefs(
+data class PhotoCompareNextPrefs(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColor: Boolean = true,
     val sortNewestFirst: Boolean = true,
@@ -43,8 +43,8 @@ class PreferencesRepository(private val context: Context) {
         val PREDICTIVE_BACK = booleanPreferencesKey("predictive_back")
     }
 
-    val prefs: Flow<PhotoComparePrefs> = context.dataStore.data.map { p ->
-        PhotoComparePrefs(
+    val prefs: Flow<PhotoCompareNextPrefs> = context.dataStore.data.map { p ->
+        PhotoCompareNextPrefs(
             themeMode = p[Keys.THEME_MODE]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.SYSTEM,
             dynamicColor = p[Keys.DYNAMIC_COLOR] ?: true,
             sortNewestFirst = p[Keys.SORT_NEWEST_FIRST] ?: true,

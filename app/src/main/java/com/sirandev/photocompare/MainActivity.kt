@@ -14,9 +14,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import com.sirandev.photocompare.data.prefs.ThemeMode
-import com.sirandev.photocompare.ui.navigation.PhotoCompareNavHost
+import com.sirandev.photocompare.ui.navigation.PhotoCompareNextNavHost
 import com.sirandev.photocompare.ui.session.SessionViewModel
-import com.sirandev.photocompare.ui.theme.PhotoCompareTheme
+import com.sirandev.photocompare.ui.theme.PhotoCompareNextTheme
 
 class MainActivity : ComponentActivity() {
 
@@ -51,7 +51,7 @@ class MainActivity : ComponentActivity() {
             val backBlocker = remember {
                 object : OnBackPressedCallback(enabled = false) {
                     override fun handleOnBackPressed() {
-                        Log.d("PhotoCompare-Back", "predictive-back OFF: consuming back, popping nav")
+                        Log.d("PhotoCompareNext-Back", "predictive-back OFF: consuming back, popping nav")
                         if (!navController.popBackStack()) {
                             finish()
                         }
@@ -67,8 +67,8 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            PhotoCompareTheme(darkTheme = darkTheme, dynamicColor = prefs.dynamicColor) {
-                PhotoCompareNavHost(navController = navController)
+            PhotoCompareNextTheme(darkTheme = darkTheme, dynamicColor = prefs.dynamicColor) {
+                PhotoCompareNextNavHost(navController = navController)
             }
         }
     }

@@ -16,7 +16,7 @@ import com.sirandev.photocompare.ui.session.SessionViewModel
 import com.sirandev.photocompare.ui.settings.SettingsScreen
 
 @Composable
-fun PhotoCompareNavHost(
+fun PhotoCompareNextNavHost(
     navController: NavHostController,
     sessionViewModel: SessionViewModel = viewModel(),
 ) {

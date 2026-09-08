@@ -5,7 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.sirandev.photocompare.data.ImageBean
 import com.sirandev.photocompare.data.mediastore.MediaStoreRepository
-import com.sirandev.photocompare.data.prefs.PhotoComparePrefs
+import com.sirandev.photocompare.data.prefs.PhotoCompareNextPrefs
 import com.sirandev.photocompare.data.prefs.PreferencesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,8 +18,8 @@ class SelectImagePoolViewModel(application: Application) : AndroidViewModel(appl
     val repository = MediaStoreRepository(application.contentResolver)
     val prefsRepository = PreferencesRepository(application)
 
-    val prefs: StateFlow<PhotoComparePrefs> = prefsRepository.prefs
-        .stateIn(viewModelScope, SharingStarted.Eagerly, PhotoComparePrefs())
+    val prefs: StateFlow<PhotoCompareNextPrefs> = prefsRepository.prefs
+        .stateIn(viewModelScope, SharingStarted.Eagerly, PhotoCompareNextPrefs())
 
     private val _folders = MutableStateFlow<List<ImageBean>>(emptyList())
     val folders: StateFlow<List<ImageBean>> = _folders

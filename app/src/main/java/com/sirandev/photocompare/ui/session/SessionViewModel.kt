@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.sirandev.photocompare.data.ImageBean
 import com.sirandev.photocompare.data.ImagePoolQuery
 import com.sirandev.photocompare.data.mediastore.MediaStoreRepository
-import com.sirandev.photocompare.data.prefs.PhotoComparePrefs
+import com.sirandev.photocompare.data.prefs.PhotoCompareNextPrefs
 import com.sirandev.photocompare.data.prefs.PreferencesRepository
 import com.sirandev.photocompare.data.prefs.ThemeMode
 import kotlinx.coroutines.Dispatchers
@@ -27,8 +27,8 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     val repository = MediaStoreRepository(application.contentResolver)
     val prefsRepository = PreferencesRepository(application)
 
-    val prefs: StateFlow<PhotoComparePrefs> = prefsRepository.prefs
-        .stateIn(viewModelScope, SharingStarted.Eagerly, PhotoComparePrefs())
+    val prefs: StateFlow<PhotoCompareNextPrefs> = prefsRepository.prefs
+        .stateIn(viewModelScope, SharingStarted.Eagerly, PhotoCompareNextPrefs())
 
     /** Query defining the current image pool. */
     val currentQuery = MutableStateFlow<ImagePoolQuery?>(null)

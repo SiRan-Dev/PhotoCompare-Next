@@ -2,4 +2,4 @@ package com.sirandev.photocompare
 
 import android.app.Application
 
-class PhotoCompareApp : Application()
+class PhotoCompareNextApp : Application()

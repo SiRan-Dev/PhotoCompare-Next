@@ -32,7 +32,7 @@ private val DarkColorScheme = darkColorScheme(
  * @param dynamicColor dynamic color on Android 12+ (Material You wallpaper palette)
  */
 @Composable
-fun PhotoCompareTheme(
+fun PhotoCompareNextTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit,

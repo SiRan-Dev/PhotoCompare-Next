@@ -20,5 +20,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "PhotoCompare"
+rootProject.name = "PhotoCompare-Next"
 include(":app")

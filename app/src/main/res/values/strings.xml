@@ -61,7 +61,7 @@
     <string name="predictive_back">Predictive back gesture</string>
     <string name="predictive_back_summary">Show the system preview animation when swiping back from the screen edge</string>
     <string name="github_project">GitHub project</string>
-    <string name="github_url" translatable="false">https://github.com/SiRan-Dev/photocompare</string>
+    <string name="github_url" translatable="false">https://github.com/SiRan-Dev/PhotoCompare-Next</string>
     <string name="delete_confirmation_count">This action will delete %1$d image(s).</string>
     <string name="delete_unselected_confirmation_count">This action will delete %1$d unselected image(s).</string>
     <string name="action_delete">Delete</string>
