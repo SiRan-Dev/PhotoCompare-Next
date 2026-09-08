@@ -156,7 +156,7 @@ fun Modifier.zoomable(
         }
 }
 
-private fun startFling(
+internal fun startFling(
     scope: CoroutineScope,
     state: ZoomableState,
     flingSpec: DecayAnimationSpec<Float>,

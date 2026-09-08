@@ -212,7 +212,28 @@ fun CompareScreen(
             )
         },
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+        val syncMode = prefs.syncZoomAndPan
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .then(
+                    if (syncMode) {
+                        // With sync enabled the whole compare screen is a single gesture surface:
+                        // zoom/pan/drag works anywhere on either window (even on empty letterbox
+                        // regions or across the divider), and the mediator mirrors it to the
+                        // other pane — no top/bottom window distinction.
+                        Modifier.syncZoomAndPanGestures(
+                            topZoom = { topBridge.activeZoom },
+                            bottomZoom = { bottomBridge.activeZoom },
+                            onLiveStart = { startLivePlayback() },
+                            onLiveEnd = { stopLivePlayback() },
+                        )
+                    } else {
+                        Modifier
+                    },
+                ),
+        ) {
             ComparePane(
                 side = PaneSide.TOP,
                 bridge = topBridge,
@@ -221,6 +242,7 @@ fun CompareScreen(
                 initialIndex = topIndex,
                 mediator = mediator,
                 sessionViewModel = sessionViewModel,
+                syncMode = syncMode,
                 darkCheckbox = prefs.checkboxStyleDark,
                 showExif = prefs.showExifDetails,
                 livePhotoResolver = livePhotoResolver,
@@ -237,6 +259,7 @@ fun CompareScreen(
                 initialIndex = bottomIndex,
                 mediator = mediator,
                 sessionViewModel = sessionViewModel,
+                syncMode = syncMode,
                 darkCheckbox = prefs.checkboxStyleDark,
                 showExif = prefs.showExifDetails,
                 livePhotoResolver = livePhotoResolver,
@@ -348,6 +371,7 @@ private fun ComparePane(
     initialIndex: Int,
     mediator: CompareMediator,
     sessionViewModel: SessionViewModel,
+    syncMode: Boolean,
     darkCheckbox: Boolean,
     showExif: Boolean,
     livePhotoResolver: ContentLivePhotoResolver,
@@ -443,6 +467,18 @@ private fun ComparePane(
                     }
                     val contentW = with(density) { (m.width * k).roundToInt().coerceAtLeast(1).toFloat().toDp() }
                     val contentH = with(density) { (m.height * k).roundToInt().coerceAtLeast(1).toFloat().toDp() }
+                    // In sync mode the whole screen is one gesture surface (see
+                    // Modifier.syncZoomAndPanGestures), so the per-image zoomable is disabled to
+                    // avoid double-handling; live-photo long press is also handled globally.
+                    val paneImageModifier = if (syncMode) {
+                        Modifier
+                    } else {
+                        Modifier.zoomable(
+                            state = zoom,
+                            onLongPressStart = { onLiveStart() },
+                            onLongPressEnd = { onLiveEnd() },
+                        )
+                    }
                     AsyncImage(
                         model = ImageRequest.Builder(pageContext)
                             .data(bean.contentUri)
@@ -458,11 +494,7 @@ private fun ComparePane(
                         alignment = Alignment.TopStart,
                         modifier = Modifier
                             .requiredSize(contentW, contentH)
-                            .zoomable(
-                                state = zoom,
-                                onLongPressStart = { onLiveStart() },
-                                onLongPressEnd = { onLiveEnd() },
-                            )
+                            .then(paneImageModifier)
                             .graphicsLayer {
                                 transformOrigin = TransformOrigin(0f, 0f)
                                 val bs = zoom.bitmapScale
