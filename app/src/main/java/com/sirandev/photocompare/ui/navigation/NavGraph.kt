@@ -31,6 +31,10 @@ fun PhotoCompareNextNavHost(
                     sessionViewModel.openDate(dayStartMillis)
                     navController.navigate(AppRoutes.IMAGES)
                 },
+                onOpenAllPhotos = {
+                    sessionViewModel.openAllPhotos()
+                    navController.navigate(AppRoutes.IMAGES)
+                },
                 onOpenSettings = { navController.navigate(AppRoutes.SETTINGS) },
             )
         }

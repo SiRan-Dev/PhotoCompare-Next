@@ -4,6 +4,7 @@ import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
@@ -63,6 +65,7 @@ import java.util.Date
 fun SelectImagePoolScreen(
     onOpenFolder: (String) -> Unit,
     onOpenDate: (Long) -> Unit,
+    onOpenAllPhotos: () -> Unit,
     onOpenSettings: () -> Unit,
     viewModel: SelectImagePoolViewModel = viewModel(),
 ) {
@@ -120,6 +123,7 @@ fun SelectImagePoolScreen(
                 else -> FolderGrid(
                     folders = folders,
                     onFolderClick = onOpenFolder,
+                    onOpenAllPhotos = onOpenAllPhotos,
                 )
             }
         }
@@ -181,6 +185,7 @@ private fun EmptyState() {
 private fun FolderGrid(
     folders: List<ImageBean>,
     onFolderClick: (String) -> Unit,
+    onOpenAllPhotos: () -> Unit,
 ) {
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 108.dp),
@@ -189,6 +194,9 @@ private fun FolderGrid(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
+        item(key = "all-photos") {
+            AllPhotosCard(onClick = onOpenAllPhotos)
+        }
         items(items = folders, key = { it.fileUri.toString() }) { folder ->
             FolderCard(folder = folder, onClick = {
                 // the folder query filters on the absolute DATA path, so pass the cover
@@ -201,6 +209,38 @@ private fun FolderGrid(
                     onFolderClick(folder.displayName)
                 }
             })
+        }
+    }
+}
+
+/** First entry of the folder grid: opens every folder as one comparison pool. */
+@Composable
+private fun AllPhotosCard(onClick: () -> Unit) {
+    Card(onClick = onClick) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .size(108.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.PhotoLibrary,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(40.dp),
+                )
+            }
+            Text(
+                text = stringResource(R.string.all_photos),
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                modifier = Modifier.padding(6.dp),
+            )
         }
     }
 }

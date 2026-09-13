@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="all_photos">Alle Fotos</string>
+    <string name="all_photos_summary">Jeden Ordner in einem Pool — ordnerübergreifend vergleichen</string>
     <string name="app_name">Photo Compare</string>
     <string name="app_name_with_version">Photo Compare - %s</string>
     <string name="action_compare_images">Vergleichen</string>

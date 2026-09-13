@@ -1,7 +1,8 @@
 package com.sirandev.photocompare.data
 
 /**
- * Which images to load into an image pool: a folder (bucket) or everything taken on a given day.
+ * Which images to load into an image pool: a folder (bucket), everything taken on a given day,
+ * or the whole library (all folders, useful to compare photos taken in different folders).
  */
 sealed interface ImagePoolQuery {
 
@@ -10,4 +11,7 @@ sealed interface ImagePoolQuery {
 
     /** @param dayStartMillis start of day in UTC millis (DATE_TAKEN basis) */
     data class ByDate(val dayStartMillis: Long) : ImagePoolQuery
+
+    /** All images across every folder, ordered per the current sort settings. */
+    data object ByAll : ImagePoolQuery
 }

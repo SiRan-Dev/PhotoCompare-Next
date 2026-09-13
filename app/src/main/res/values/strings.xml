@@ -4,6 +4,13 @@
     <string name="permissions_title">Need storage permission</string>
     <string name="permissions_explanation">This app is useless without the permission to read your images, and to cache bitmaps on the internal storage.</string>
     <string name="action_select_imagepool">Select folder or image date</string>
+    <string name="all_photos">All Photos</string>
+    <string name="all_photos_summary">Every folder in one pool — compare across folders</string>
+    <string name="cross_folder_mark_hint">Marked (another folder): %1$s — tap any photo to compare</string>
+    <string name="clear_cross_folder_mark">Clear marked photo</string>
+    <string name="replace_top_photo">Replace top photo…</string>
+    <string name="replace_bottom_photo">Replace bottom photo…</string>
+    <string name="choose_folder">Choose a folder</string>
     <string name="title_date_select">Select by date</string>
     <string name="hint_date_select">Images taken on …</string>
     <string name="action_loading_images">Loading images …</string>

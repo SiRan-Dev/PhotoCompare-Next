@@ -5,17 +5,20 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Compare
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
@@ -27,6 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -36,6 +40,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,6 +48,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.sirandev.photocompare.R
@@ -68,6 +74,16 @@ fun ListImagesScreen(
     val isLoading by sessionViewModel.isLoading.collectAsState()
     val prefs by sessionViewModel.prefs.collectAsState()
     val lastComparedIndex by sessionViewModel.lastComparedIndex.collectAsState()
+    val markedImage by sessionViewModel.markedImage.collectAsState()
+
+    val scope = rememberCoroutineScope()
+    // mark set in ANOTHER folder: the marked photo is not part of this pool's grid
+    val foreignMark = markedImage?.takeIf { mark -> images.none { it.contentUri == mark.contentUri } }
+
+    // when a cross-folder compare was exited with the system back button, bring the pool back
+    LaunchedEffect(Unit) {
+        sessionViewModel.restoreLibraryCompareIfActive()
+    }
 
     var showMenu by remember { mutableStateOf(false) }
     var showLoseSelectionDialog by remember { mutableStateOf(false) }
@@ -135,12 +151,28 @@ fun ListImagesScreen(
             contentPadding = PaddingValues(4.dp),
             modifier = Modifier.fillMaxSize().padding(padding),
         ) {
+            foreignMark?.let { mark ->
+                item(key = "foreign-mark-banner", span = { GridItemSpan(maxLineSpan) }) {
+                    CrossFolderMarkBanner(
+                        displayName = mark.displayName,
+                        onClear = { sessionViewModel.clearMarkForCompare() },
+                    )
+                }
+            }
             itemsIndexed(items = images, key = { _, bean -> bean.contentUri.toString() }) { index, bean ->
                 ImageThumbnail(
                     bean = bean,
                     onClick = {
-                        val (top, bottom) = sessionViewModel.compareIndexesFor(index)
-                        onOpenCompare(top, bottom)
+                        if (sessionViewModel.isForeignMarkPresent()) {
+                            // cross-folder compare: re-anchor the pair on the whole library
+                            scope.launch {
+                                val (top, bottom) = sessionViewModel.startCrossPoolCompare(index)
+                                if (top >= 0 && bottom >= 0) onOpenCompare(top, bottom)
+                            }
+                        } else {
+                            val (top, bottom) = sessionViewModel.compareIndexesFor(index)
+                            onOpenCompare(top, bottom)
+                        }
                     },
                     onLongClick = { sessionViewModel.toggleMarkForCompare(index) },
                 )
@@ -198,6 +230,40 @@ private fun ImageThumbnail(
                     imageVector = Icons.Filled.Compare,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onPrimary,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Shown at the top of a pool's grid when the session-wide mark lives in ANOTHER folder:
+ * tapping any thumbnail compares it with the marked photo across folders.
+ */
+@Composable
+private fun CrossFolderMarkBanner(displayName: String, onClear: () -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.cross_folder_mark_hint, displayName),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = onClear) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = stringResource(R.string.clear_cross_folder_mark),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
         }

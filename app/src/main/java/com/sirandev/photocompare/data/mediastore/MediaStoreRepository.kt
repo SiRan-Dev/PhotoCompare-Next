@@ -55,7 +55,7 @@ class MediaStoreRepository(private val contentResolver: ContentResolver) {
         result
     }
 
-    private fun selectExpression(query: ImagePoolQuery): Pair<String, Array<String>> = when (query) {
+    private fun selectExpression(query: ImagePoolQuery): Pair<String?, Array<String>?> = when (query) {
         is ImagePoolQuery.ByDate -> {
             val cal = Calendar.getInstance().apply { time = Date(query.dayStartMillis) }
             truncateToStartOfDay(cal)
@@ -68,6 +68,8 @@ class MediaStoreRepository(private val contentResolver: ContentResolver) {
 
         is ImagePoolQuery.ByFolder ->
             Pair("${MediaStore.Images.ImageColumns.DATA} like ?", arrayOf("${query.folderPath}%"))
+
+        is ImagePoolQuery.ByAll -> Pair(null, null)
     }
 
     private fun truncateToStartOfDay(cal: Calendar) {

@@ -6,6 +6,8 @@
     <string name="action_nav_right">向右导航</string>
     <string name="action_select_image">选择图像</string>
     <string name="action_select_imagepool">选择文件夹或图像的日期</string>
+    <string name="all_photos">全部照片</string>
+    <string name="all_photos_summary">把所有文件夹合并为一个池 — 跨文件夹对比</string>
     <string name="app_name">照片比较</string>
     <string name="app_name_with_version">照片比较 - %s</string>
     <string name="channel_filedelete_description">显示删除不需要的文件的进度</string>

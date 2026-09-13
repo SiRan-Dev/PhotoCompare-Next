@@ -42,6 +42,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -111,8 +113,15 @@ fun CompareScreen(
     var showMenu by remember { mutableStateOf(false) }
     var showLoseSelectionDialog by remember { mutableStateOf(false) }
 
-    val topBridge = remember { PaneBridgeImpl(PaneSide.TOP) }
-    val bottomBridge = remember { PaneBridgeImpl(PaneSide.BOTTOM) }
+    // which pane the user asked to replace via the ⋮ menu (dialog opens while non-null)
+    var panePickerSide by remember { mutableStateOf<PaneSide?>(null) }
+    // bumping this key rebuilds both panes at fresh start pages (after a pane replacement)
+    var compareEpoch by remember { mutableIntStateOf(0) }
+    var paneTopIndex by remember { mutableIntStateOf(topIndex) }
+    var paneBottomIndex by remember { mutableIntStateOf(bottomIndex) }
+
+    val topBridge = remember { PaneBridgeImpl(PaneSide.TOP, topIndex) }
+    val bottomBridge = remember { PaneBridgeImpl(PaneSide.BOTTOM, bottomIndex) }
     val mediator = remember(topBridge, bottomBridge) { CompareMediator(topBridge, bottomBridge) }
     mediator.syncZoomAndPan = prefs.syncZoomAndPan
 
@@ -131,7 +140,7 @@ fun CompareScreen(
         val imgs = sessionViewModel.images.value
         PaneSide.entries.forEach { side ->
             val bridge = if (side == PaneSide.TOP) topBridge else bottomBridge
-            val bean = imgs.getOrNull(bridge.activePage) ?: return@forEach
+            val bean = imgs.getOrNull(bridge.currentIndex) ?: return@forEach
             scope.launch {
                 val info = livePhotoResolver.resolve(bean)
                 if (info !is LivePhotoInfo.NotLivePhoto) {
@@ -203,7 +212,22 @@ fun CompareScreen(
                                 onClick = { sessionViewModel.setCheckboxStyleDark(!prefs.checkboxStyleDark) },
                             )
                             DropdownMenuItem(
+                                text = { Text(text = stringResource(R.string.replace_top_photo)) },
+                                onClick = {
+                                    showMenu = false
+                                    panePickerSide = PaneSide.TOP
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(text = stringResource(R.string.replace_bottom_photo)) },
+                                onClick = {
+                                    showMenu = false
+                                    panePickerSide = PaneSide.BOTTOM
+                                },
+                            )
+                            DropdownMenuItem(
                                 text = { Text(text = stringResource(R.string.show_selection)) },
+                                enabled = !sessionViewModel.isLibraryCompareActive,
                                 onClick = { navController.navigate(AppRoutes.SELECTED) },
                             )
                         }
@@ -213,6 +237,7 @@ fun CompareScreen(
         },
     ) { padding ->
         val syncMode = prefs.syncZoomAndPan
+        key(compareEpoch) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -237,9 +262,10 @@ fun CompareScreen(
             ComparePane(
                 side = PaneSide.TOP,
                 bridge = topBridge,
+                otherBridge = bottomBridge,
                 modifier = Modifier.weight(1f),
                 images = images,
-                initialIndex = topIndex,
+                initialIndex = paneTopIndex,
                 mediator = mediator,
                 sessionViewModel = sessionViewModel,
                 syncMode = syncMode,
@@ -254,9 +280,10 @@ fun CompareScreen(
             ComparePane(
                 side = PaneSide.BOTTOM,
                 bridge = bottomBridge,
+                otherBridge = topBridge,
                 modifier = Modifier.weight(1f),
                 images = images,
-                initialIndex = bottomIndex,
+                initialIndex = paneBottomIndex,
                 mediator = mediator,
                 sessionViewModel = sessionViewModel,
                 syncMode = syncMode,
@@ -269,6 +296,38 @@ fun CompareScreen(
                 onLiveEnd = { stopLivePlayback() },
             )
         }
+        }
+    }
+
+    // replace one pane with a photo from any folder (compare re-anchors accordingly)
+    panePickerSide?.let { side ->
+        PanePickerDialog(
+            title = stringResource(
+                if (side == PaneSide.TOP) R.string.replace_top_photo else R.string.replace_bottom_photo,
+            ),
+            sortNewestFirst = prefs.sortNewestFirst,
+            filenamesForSort = prefs.filenamesForSort,
+            onDismiss = { panePickerSide = null },
+            onPicked = { bean ->
+                panePickerSide = null
+                stopLivePlayback()
+                scope.launch {
+                    val (top, bottom) = sessionViewModel.rebaseCompareForPaneReplace(
+                        currentTopReal = topBridge.currentIndex,
+                        currentBottomReal = bottomBridge.currentIndex,
+                        replaceTop = side == PaneSide.TOP,
+                        picked = bean,
+                    )
+                    if (top >= 0 && bottom >= 0) {
+                        paneTopIndex = top
+                        paneBottomIndex = bottom
+                        topBridge.currentIndex = top
+                        bottomBridge.currentIndex = bottom
+                        compareEpoch += 1
+                    }
+                }
+            },
+        )
     }
 
     if (showLoseSelectionDialog) {
@@ -332,15 +391,17 @@ private fun Modifier.matchStillImageTransform(zoom: ZoomableState): Modifier = g
 /** Per-pane bridge state held across recompositions. */
 private class PaneBridgeImpl(
     override val side: PaneSide,
+    initialIndex: Int = NO_INITIAL_INDEX,
 ) : CompareMediator.PaneBridge {
 
-    /** The zoom state of the currently settled page, registered by the pane composable. */
+    /** The zoom state of the currently displayed photo, registered by the pane composable. */
     var activeZoom: ZoomableState? = null
 
-    var activePage: Int = 0
-
-    override val currentIndex: Int
-        get() = activePage
+    /**
+     * The real image-list index currently displayed. Observable snapshot state so the OTHER
+     * pane can exclude this index from its own pager pages.
+     */
+    override var currentIndex: Int by mutableIntStateOf(initialIndex)
 
     override val sourceDimension: Dim?
         get() = activeZoom?.takeIf { it.isReady }?.srcSize
@@ -366,6 +427,7 @@ private class PaneBridgeImpl(
 private fun ComparePane(
     side: PaneSide,
     bridge: PaneBridgeImpl,
+    otherBridge: PaneBridgeImpl,
     modifier: Modifier,
     images: List<ImageBean>,
     initialIndex: Int,
@@ -382,40 +444,62 @@ private fun ComparePane(
 ) {
     if (images.isEmpty()) return
     val zoomStates = remember { mutableMapOf<Int, ZoomableState>() }
-    val initial = remember(images) { deriveInitialIndex(initialIndex, images.size) }
-    val pagerState = rememberPagerState(initialPage = initial.coerceIn(0, images.size - 1), pageCount = { images.size })
     val density = LocalDensity.current
     val paneContext = LocalContext.current
 
-    // register the active page's zoom state with the mediator bridge
-    val activePage by remember { derivedStateOf { pagerState.settledPage } }
-    LaunchedEffect(activePage) {
-        bridge.activePage = activePage
-        bridge.activeZoom = zoomStates[activePage]
-    }
+    // Strict mutual exclusion by page order: this pane's pages are the real list indices
+    // with the OTHER pane's current index removed. The other photo therefore never exists as
+    // an intermediate page here — swiping straight over it lands on the following photo with
+    // a single gesture and no corrective jump animation.
+    val imageCount = images.size
+    val excluded = otherBridge.currentIndex
+    val initialReal = remember(images) { deriveInitialIndex(initialIndex, imageCount) }
+    val initialPage = if (skipEnabled(excluded, imageCount) && initialReal != excluded) {
+        realToPage(initialReal, excluded, imageCount)
+    } else {
+        initialReal
+    }.coerceIn(0, (if (skipEnabled(excluded, imageCount)) imageCount - 1 else imageCount) - 1)
+    val pagerState = rememberPagerState(
+        initialPage = initialPage,
+        pageCount = { if (skipEnabled(otherBridge.currentIndex, imageCount)) imageCount - 1 else imageCount },
+    )
 
-    // page arbitration (mutual exclusion), mirroring PhotoViewMediator.onPageSelected
-    var correcting by remember { mutableStateOf(false) }
-    LaunchedEffect(mediator, images.size) {
-        mediator.listSize = images.size
+    // Keep the mediator/bridge in sync with the currently displayed real index. Duplicate
+    // photos are impossible by construction, so no post-settle correction is required.
+    LaunchedEffect(pagerState, mediator, imageCount) {
         snapshotFlow { pagerState.settledPage }
             .distinctUntilChanged()
             .collect { page ->
-                if (correcting) return@collect
-                val accepted = mediator.onPageSelected(bridge, page)
-                if (!accepted) {
-                    val next = mediator.getNextValidIndex(bridge, page)
-                    if (next != CompareMediator.NO_VALID_IMAGE_INDEX) {
-                        correcting = true
-                        try {
-                            pagerState.animateScrollToPage(next)
-                        } finally {
-                            correcting = false
-                        }
-                    }
+                val e = otherBridge.currentIndex
+                val real = if (skipEnabled(e, imageCount)) pageToReal(page, e, imageCount) else page
+                bridge.currentIndex = real
+            }
+    }
+
+    // When the OTHER pane changes photo, this pane's excluded index moves, so the page slot of
+    // this pane's current photo can shift by one. Re-anchor instantly (no animation) so the
+    // very same photo stays on screen — visually seamless.
+    LaunchedEffect(pagerState, otherBridge, imageCount) {
+        snapshotFlow { otherBridge.currentIndex }
+            .distinctUntilChanged()
+            .collect { e ->
+                if (!skipEnabled(e, imageCount)) return@collect
+                val real = bridge.currentIndex
+                if (real !in 0 until imageCount || real == e) return@collect
+                val target = realToPage(real, e, imageCount)
+                val count = imageCount - 1
+                if (target in 0 until count && pagerState.settledPage != target) {
+                    pagerState.scrollToPage(target)
                 }
             }
     }
+
+    // register the active photo's zoom state with the mediator bridge
+    LaunchedEffect(bridge.currentIndex, imageCount) {
+        bridge.activeZoom = zoomStates[bridge.currentIndex]
+    }
+
+    val activePage by remember { derivedStateOf { pagerState.settledPage } }
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val viewportPx = with(density) {
@@ -427,9 +511,11 @@ private fun ComparePane(
             beyondViewportPageCount = 1,
             modifier = Modifier.fillMaxSize(),
         ) { page ->
-            val bean = images[page]
-            val zoom = remember(page, bean.contentUri) {
-                zoomStates.getOrPut(page) {
+            val e = otherBridge.currentIndex
+            val real = if (skipEnabled(e, imageCount)) pageToReal(page, e, imageCount) else page
+            val bean = images.getOrNull(real) ?: return@HorizontalPager
+            val zoom = remember(real, bean.contentUri) {
+                zoomStates.getOrPut(real) {
                     ZoomableState().apply {
                         onStateChanged = { mediator.onPanOrZoomChanged(bridge) }
                     }
@@ -543,10 +629,10 @@ private fun ComparePane(
                     )
                 }
 
-                // selection checkbox
+                // selection checkbox (real index in the shared list)
                 Checkbox(
                     checked = bean.selected,
-                    onCheckedChange = { sessionViewModel.setSelected(page, it) },
+                    onCheckedChange = { sessionViewModel.setSelected(real, it) },
                     colors = if (darkCheckbox) {
                         CheckboxDefaults.colors(
                             checkedColor = Color.White,
@@ -580,7 +666,7 @@ private fun ComparePane(
         // open this pane's CURRENT photo in the system gallery
         IconButton(
             onClick = {
-                images.getOrNull(bridge.activePage)?.let { bean ->
+                images.getOrNull(bridge.currentIndex)?.let { bean ->
                     openInGallery(paneContext, bean.contentUri)
                 }
             },
@@ -601,6 +687,34 @@ private fun deriveInitialIndex(initialIndex: Int, size: Int): Int {
     if (size == 0) return 0
     return if (initialIndex in 0 until size) initialIndex else size - 1
 }
+
+/** Sentinel for "no valid real index yet" on a pane bridge. */
+private const val NO_INITIAL_INDEX = -1
+
+/**
+ * Page-index ↔ real-image-index mapping for the strict mutual-exclusion pager.
+ *
+ * When [excluded] is the real index held by the OTHER pane, this pane has [size]−1 pages and
+ * [excluded] is removed from the page sequence. Page [page] then maps to the [page]-th real
+ * index of that reduced sequence. [skipEnabled] is false (identity mapping) for tiny pools or
+ * when the other pane has no photo yet.
+ */
+private fun skipEnabled(excluded: Int, size: Int): Boolean =
+    size > 1 && excluded in 0 until size
+
+private fun pageToReal(page: Int, excluded: Int, size: Int): Int =
+    if (skipEnabled(excluded, size)) {
+        if (page < excluded) page else page + 1
+    } else {
+        page
+    }
+
+private fun realToPage(real: Int, excluded: Int, size: Int): Int =
+    if (skipEnabled(excluded, size)) {
+        if (real < excluded) real else real - 1
+    } else {
+        real
+    }
 
 /**
  * Decode scale for one pane: ~[VIEWPORT_LOAD_FACTOR]× the viewport, capped at

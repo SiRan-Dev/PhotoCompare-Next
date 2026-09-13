@@ -132,9 +132,13 @@ fun SelectedImagesScreen(
                         Icon(Icons.Filled.MoreVert, contentDescription = null)
                     }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        // During a cross-folder compare the list is the whole library, where
+                        // invert/delete could affect thousands of photos — keep them read-only.
+                        val destructiveDisabled = sessionViewModel.isLibraryCompareActive
                         DropdownMenuItem(
                             text = { Text(text = stringResource(R.string.invert_selection)) },
                             leadingIcon = { Icon(Icons.Filled.Shuffle, contentDescription = null) },
+                            enabled = !destructiveDisabled,
                             onClick = {
                                 showMenu = false
                                 sessionViewModel.invertSelection()
@@ -143,6 +147,7 @@ fun SelectedImagesScreen(
                         DropdownMenuItem(
                             text = { Text(text = stringResource(R.string.delete_selected)) },
                             leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
+                            enabled = !destructiveDisabled,
                             onClick = {
                                 showMenu = false
                                 if (selected.isNotEmpty()) pendingDeleteSelected = true
@@ -151,6 +156,7 @@ fun SelectedImagesScreen(
                         DropdownMenuItem(
                             text = { Text(text = stringResource(R.string.delete_unselected)) },
                             leadingIcon = { Icon(Icons.Filled.DeleteSweep, contentDescription = null) },
+                            enabled = !destructiveDisabled,
                             onClick = {
                                 showMenu = false
                                 if (unselected.isNotEmpty()) {
